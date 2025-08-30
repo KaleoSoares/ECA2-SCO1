@@ -1,12 +1,12 @@
 org 128
 
-; Vari·veis de 8 bits
+; Vari√°veis de 8 bits
 A8:     DB      200             ; Primeiro operando
 B8:     DB      100             ; Segundo operando
 SUM8:   DB      0               ; Resultado da soma
 OVF8:   DB      0               ; Indicador de overflow (FFh ou 0)
 
-; Vari·veis de 16 bits
+; Vari√°veis de 16 bits
 A16:    DW      40000           ; Primeiro operando
 B16:    DW      30000           ; Segundo operando
 SUM16:  DW      0               ; Resultado da soma
