@@ -1,0 +1,255 @@
+;>-----------------------------------------------------------
+;> ARQUIVO FINAL 1
+;>-----------------------------------------------------------
+;> Inicializacao do apontador da pilha
+          ORG 0
+          MOV #65498,R6
+;>-------------------------------------------------<
+;>>>> INICIO DO CODIGO
+;>-------------------------------------------------<
+INICIO:
+                MOV     #NOME_E_HT, R1
+                MOV     #65500, R2
+LACO_PRINT:
+                MOV     (R1)+, R0
+                BEQ     LER_TECLA
+                MOV     R0, (R2)
+                INC     R2
+                BR      LACO_PRINT
+LER_TECLA:
+                CLR     65498
+ESPERA_TECLA:
+                TST     65498
+                BEQ     ESPERA_TECLA
+                MOV     65499, R0
+                MOV     #'S', R4
+                CMP     R4, R0
+                BEQ     FIM_PROGRAMA
+                MOV     #'s', R4
+                CMP     R4, R0
+                BEQ     FIM_PROGRAMA
+                MOV     #'N', R4
+                CMP     R4, R0
+                BEQ     FIM_PROGRAMA
+                MOV     #'n', R4
+                CMP     R4, R0
+                BEQ     FIM_PROGRAMA
+                BR      LER_TECLA
+FIM_PROGRAMA:
+                HLT
+                ORG     1024
+NOME_E_HT:
+                dw      'V'
+                dw      'i'
+                dw      'n'
+                dw      'i'
+                dw      'c'
+                dw      'i'
+                dw      'u'
+                dw      's'
+                dw      ' '
+                dw      'F'
+                dw      'r'
+                dw      'a'
+                dw      'n'
+                dw      'c'
+                dw      'o'
+                dw      ' '
+                dw      'H'
+                dw      'T'
+                dw      '3'
+                dw      '0'
+                dw      '5'
+                dw      '0'
+                dw      '3'
+                dw      '2'
+                dw      '7'
+                dw      ' '
+                dw      '>'
+                dw      ' '
+                dw      0
+
+;>---------------------------------------------<
+;> INICIO DA BIBLIOTECA BibCesarV8+
+;>---------------------------------------------<
+_S_LIMPA_VISOR_ITERATIVA:
+          MOV R0,-(R6)
+          MOV R1,-(R6)
+          MOV #65500,R1
+          MOV #36,R0
+__OUTRO_LED:
+          CLR (R1)
+          INC R1
+          SOB R0,__OUTRO_LED
+          MOV (R6)+,R1
+          MOV (R6)+,R0
+          RTS R7
+_S_LIMPA_VISOR_RAPIDA:
+          CLR 65500
+          CLR 65501
+          CLR 65502
+          CLR 65503
+          CLR 65504
+          CLR 65505
+          CLR 65506
+          CLR 65507
+          CLR 65508
+          CLR 65509
+          CLR 65510
+          CLR 65511
+          CLR 65512
+          CLR 65513
+          CLR 65514
+          CLR 65515
+          CLR 65516
+          CLR 65517
+          CLR 65518
+          CLR 65519
+          CLR 65520
+          CLR 65521
+          CLR 65522
+          CLR 65523
+          CLR 65524
+          CLR 65525
+          CLR 65526
+          CLR 65527
+          CLR 65528
+          CLR 65529
+          CLR 65530
+          CLR 65531
+          CLR 65532
+          CLR 65533
+          CLR 65534
+          CLR 65535
+          RTS R7
+_S_ESCREVER_NO_VISOR:
+__VOLTA_ESCR:
+          MOV (R1),R3
+          ASR R3
+          ASR R3
+          ASR R3
+          ASR R3
+          ASR R3
+          ASR R3
+          ASR R3
+          ASR R3
+          MOV R3,(R2)
+          SOB R0,__SEGUNDO
+          RTS R7
+__SEGUNDO:
+          INC R2
+          BEQ __FIM_VISOR2
+__CONTINUA2:
+          MOV (R1)+,R3
+          MOV R3,(R2)
+          SOB R0,__PROXIMO_LED
+          RTS R7
+__PROXIMO_LED:
+          INC R2
+          BNE __VOLTA_ESCR
+__FIM_VISOR1:
+          MOV #65500,R2
+          BR  __VOLTA_ESCR
+__FIM_VISOR2:
+          MOV #65500,R2
+          BR  __CONTINUA2
+_S_MULTIPLICAR:
+          MOV R2,-(R6)
+          MOV R3,-(R6)
+          MOV #16,R2
+          CLR R3
+__INICIO_LACO:
+          ROR R1
+          BCC __NAO_SOMAR
+          ADD R0,R3
+__NAO_SOMAR:
+          ROR R3
+          BCC __FIM_LACO
+          ADD #32768,R1
+__FIM_LACO:
+          SOB R2,__INICIO_LACO
+          MOV R3,R0
+          MOV (R6)+,R3
+          MOV (R6)+,R2
+          TST R0
+          BNE __ALERTA_ESTOURO
+          CCC V
+          RTS R7
+__ALERTA_ESTOURO:
+          SCC V
+          RTS R7
+_S_DIVIDIR:
+          TST R2
+          BNE __NAO_ZERO
+          CCC V
+          RTS R7
+__NAO_ZERO:
+          CMP R0,R2
+          BCC __INDICA_ESTOURO
+          MOV R3,-(R6)
+          MOV R4,-(R6)
+          MOV R5,-(R6)
+          MOV R0,R3
+          MOV R1,R4
+          MOV #16,R5
+_DIV_LOOP:
+          ASL R4
+          ROL R3
+          BCS __SUBTRAI_DIVISOR
+          CMP R3,R2
+          BCS __BIT_ZERO
+__SUBTRAI_DIVISOR:
+          SUB R2,R3
+          INC R4
+__BIT_ZERO:
+          SOB R5,_DIV_LOOP
+          MOV R3,R1
+          MOV R4,R0
+          MOV (R6)+,R5
+          MOV (R6)+,R4
+          MOV (R6)+,R3
+          CCC V Z
+          RTS R7
+__INDICA_ESTOURO:
+          SCC V
+          CCC Z
+          RTS R7
+_S_LER_CARACTER:
+          MOV R0,-(R6)
+          MOV R1,-(R6)
+          MOV #65498,R3
+          CLR (R3)
+_L1:
+          TST (R3)
+          BEQ _L1
+          MOV (R6)+,R1
+          MOV (R6)+,R0
+          RTS R7
+_S_LER_CARACTER_VISOR:
+          MOV R0,-(R6)
+          MOV R1,-(R6)
+          MOV #65498,R3
+_L2:
+          CLR (R3)
+_L3:
+          TST (R3)
+          BEQ _L3
+          MOV 65499, 65500
+          BR _L2
+_S_LER_CARACTERES_VISOR:
+          MOV R0,-(R6)
+          MOV R1,-(R6)
+          MOV #65498,R3
+          MOV #65500,R1
+_LER_LOOP:
+          CLR (R3)
+_L4:
+          TST (R3)
+          BEQ _L4
+          MOV 65499, (R1)+
+          CMP R1, #65535
+          BNE _LER_LOOP
+__FIM_LER:
+          MOV (R6)+,R1
+          MOV (R6)+,R0
+          RTS R7

@@ -1,0 +1,290 @@
+;------------------------------------------------------------
+; CALCULADORA - Cesar 16i (Daedalus)  — do zero
+; Vídeo: 1024..1039 (16 células)  |  Teclado: 1040/1041
+;------------------------------------------------------------
+
+ORG 0
+MOV #900, R6                 ; topo da pilha (RAM, longe de E/S)
+
+INICIO:
+    JSR R7, LimpaTela
+    MOV #MSG_BEMVINDO, R1
+    JSR R7, EscreveString
+
+;---------------- Loop principal ----------------
+LOOP_PRINCIPAL:
+    MOV #MSG_NUM1, R1
+    JSR R7, EscreveString
+    JSR R7, LerNumero       ; valor em R0
+    MOV R0, R3              ; R3 = num1
+
+    MOV #MSG_OP, R1
+    JSR R7, EscreveString
+    JSR R7, LerChar
+    MOV R0, R4
+    JSR R7, EcoaChar        ; ecoa operador
+
+    MOV #MSG_NUM2, R1
+    JSR R7, EscreveString
+    JSR R7, LerNumero
+    MOV R0, R5              ; R5 = num2
+
+    CMP R4, #'+'            ; soma
+    BEQ SOMA
+    CMP R4, #'-'            ; subtração
+    BEQ SUBTRACAO
+    CMP R4, #'*'            ; multiplicação
+    BEQ MULTIPLICACAO
+    CMP R4, #'/'            ; divisão
+    BEQ DIVISAO
+    BR MOSTRAR_RESULTADO    ; operador inválido ? mostra 0
+
+SOMA:
+    MOV R3, R0
+    ADD R5, R0
+    BR MOSTRAR_RESULTADO
+
+SUBTRACAO:
+    MOV R3, R0
+    SUB R5, R0
+    BR MOSTRAR_RESULTADO
+
+MULTIPLICACAO:               ; R0 = R3 * R5 (somatório simples)
+    CLR R0
+    MOV R5, R1
+MUL_L1:
+    TST R1
+    BEQ MOSTRAR_RESULTADO
+    ADD R3, R0
+    DEC R1
+    BR MUL_L1
+
+DIVISAO:                     ; quociente (inteiro) por subtrações
+    CLR R0                   ; R0 = quociente
+    MOV R3, R1               ; R1 = dividendo restante
+    TST R5
+    BEQ MOSTRAR_RESULTADO    ; div/0 ? mostra 0
+DIV_L1:
+    CMP R1, R5
+    BLT MOSTRAR_RESULTADO
+    SUB R5, R1
+    INC R0
+    BR DIV_L1
+
+MOSTRAR_RESULTADO:
+    MOV #MSG_RESULT, R1
+    JSR R7, EscreveString
+    MOV R0, R1               ; número a imprimir em R1
+    JSR R7, EscreveNumero
+
+    MOV #' ', R0             ; separa e espera tecla
+    JSR R7, EscreveChar
+    JSR R7, LerChar
+    JSR R7, LimpaTela
+    JMP LOOP_PRINCIPAL       ; salto longo, sem limite de 8 bits
+
+
+;---------------- Dados ----------------
+ORG 2000
+MSG_BEMVINDO:
+    DW 'C'
+    DW 'A'
+    DW 'L'
+    DW 'C'
+    DW 'U'
+    DW 'L'
+    DW 'A'
+    DW 'D'
+    DW 'O'
+    DW 'R'
+    DW 'A'
+    DW ' '
+    DW 'C'
+    DW 'E'
+    DW 'S'
+    DW 'A'
+    DW 'R'
+    DW 0
+
+MSG_NUM1:
+    DW 'N'
+    DW '1'
+    DW ':'
+    DW ' '
+    DW 0
+
+MSG_OP:
+    DW 'O'
+    DW 'P'
+    DW ':'
+    DW ' '
+    DW 0
+
+MSG_NUM2:
+    DW 'N'
+    DW '2'
+    DW ':'
+    DW ' '
+    DW 0
+
+MSG_RESULT:
+    DW 'R'
+    DW '='
+    DW ' '
+    DW 0
+
+CURSOR:                      ; endereço atual de escrita no vídeo
+    DW 1024
+
+;---------------- Rotinas ----------------
+; Limpa 16 células (1024..1039) e zera o cursor
+LimpaTela:
+    MOV R0,-(R6)
+    MOV R1,-(R6)
+    MOV #16, R0
+    MOV #1024, R1
+LT_L1:
+    CLR (R1)+
+    SOB R0, LT_L1
+    MOV #CURSOR, R1
+    MOV #1024, R0
+    MOV R0, (R1)
+    MOV (R6)+, R1
+    MOV (R6)+, R0
+    RTS R7
+
+; Escreve um caractere em R0 usando o cursor, com wrap 1024..1039
+EscreveChar:
+    MOV R1,-(R6)
+    MOV R2,-(R6)
+    MOV #CURSOR, R2
+    MOV (R2), R1
+    MOV R0, (R1)
+    INC R1
+    CMP R1, #1040
+    BNE EC_NOWRAP
+    MOV #1024, R1
+EC_NOWRAP:
+    MOV R1, (R2)
+    MOV (R6)+, R2
+    MOV (R6)+, R1
+    RTS R7
+
+; Escreve string zero-terminada apontada por R1
+EscreveString:
+    MOV R0,-(R6)
+ES_L1:
+    MOV (R1)+, R0
+    BEQ ES_FIM
+    JSR R7, EscreveChar
+    BR ES_L1
+ES_FIM:
+    MOV (R6)+, R0
+    RTS R7
+
+; Lê um caractere do teclado (status=1040, dado=1041)
+LerChar:
+    CLR 1040
+LC_L1:
+    TST 1040
+    BEQ LC_L1
+    MOV 1041, R0
+    RTS R7
+
+; Ecoa caractere que está em R0
+EcoaChar:
+    JSR R7, EscreveChar
+    RTS R7
+
+; Lê um número decimal positivo. Termina em não-dígito (ex.: Enter).
+; Retorna em R0. Ecoa os dígitos.
+LerNumero:
+    MOV R1,-(R6)
+    MOV R2,-(R6)
+    MOV R3,-(R6)
+    CLR R2                    ; acumulador (valor)
+LN_LOOP:
+    JSR R7, LerChar
+    MOV R0, R3
+    CMP R3, #'0'
+    BLT LN_FIM
+    CMP R3, #'9'
+    BGT LN_FIM
+    ; ecoa dígito
+    MOV R3, R0
+    JSR R7, EscreveChar
+    ; R2 = R2*10 + (R3-'0')
+    SUB #'0', R3              ; dígito 0..9
+    MOV R2, R0                ; R0 = acc
+    ASL R0                    ; 2*acc
+    MOV R0, R1                ; R1 = 2*acc
+    ASL R0                    ; 4*acc
+    ASL R0                    ; 8*acc
+    ADD R1, R0                ; 10*acc
+    ADD R3, R0
+    MOV R0, R2
+    BR LN_LOOP
+LN_FIM:
+    MOV R2, R0
+    MOV (R6)+, R3
+    MOV (R6)+, R2
+    MOV (R6)+, R1
+    RTS R7
+
+; Imprime inteiro não-negativo em R1
+EscreveNumero:
+    MOV R0,-(R6)
+    MOV R2,-(R6)
+    MOV R3,-(R6)
+    CLR R3
+    CMP R1, #0
+    BNE EN_LOOP
+    MOV #'0', R0
+    JSR R7, EscreveChar
+    BR EN_FIM
+EN_LOOP:
+    CLR R0
+    MOV #10, R2
+    ; Divisão (R0:R1) / R2  -> quociente em R0, resto em R1
+    JSR R7, SubDividir10
+    ADD #'0', R1
+    MOV R1, -(R6)            ; empilha dígito
+    INC R3
+    MOV R0, R1
+    CMP R1, #0
+    BNE EN_LOOP
+EN_PRINT:
+    MOV (R6)+, R0
+    JSR R7, EscreveChar
+    DEC R3
+    BNE EN_PRINT
+EN_FIM:
+    MOV (R6)+, R3
+    MOV (R6)+, R2
+    MOV (R6)+, R0
+    RTS R7
+
+; --- Divisão por 10: (R0:R1) ÷ 10 -> quociente em R0, resto em R1 ---
+SubDividir10:
+    ; Implementação clássica de divisão binária (16 bits)
+    MOV R3,-(R6)
+    MOV R4,-(R6)
+    MOV R5,-(R6)
+    MOV R0, R3
+    MOV R1, R4
+    MOV #16, R5
+SD_LOOP:
+    ASL R4
+    ROL R3
+    CMP R3, #10
+    BLT SD_ZERO
+    SUB #10, R3
+    INC R4
+SD_ZERO:
+    SOB R5, SD_LOOP
+    MOV R3, R1               ; resto
+    MOV R4, R0               ; quociente
+    MOV (R6)+, R5
+    MOV (R6)+, R4
+    MOV (R6)+, R3
+    RTS R7
